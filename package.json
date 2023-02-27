@@ -1,0 +1,42 @@
+{
+  "name": "nomobase-desktop",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "fetch:driver": "rimraf tools firmwares && node src/link/script/download-tools.js && node src/link/script/download-firmwares.js",
+    "start": "electron-forge start",
+    "package": "electron-forge package",
+    "make": "electron-forge make"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@abandonware/noble": "^1.9.2-10",
+    "ansi-string": "^0.2.1",
+    "cli-color": "^2.0.1",
+    "download-github-release": "^0.3.2",
+    "electron-squirrel-startup": "^1.0.0",
+    "https": "^1.0.0",
+    "install": "^0.13.0",
+    "js-yaml": "^4.0.0",
+    "node-fetch": "^2.6.7",
+    "serialport": "^10.4.0",
+    "ws": "^7.1.1"
+  },
+  "devDependencies": {
+    "@electron-forge/cli": "^6.0.5",
+    "@electron-forge/maker-deb": "^6.0.5",
+    "@electron-forge/maker-rpm": "^6.0.5",
+    "@electron-forge/maker-squirrel": "^6.0.5",
+    "@electron-forge/maker-zip": "^6.0.5",
+    "babel-eslint": "^10.0.1",
+    "electron": "^23.1.1",
+    "eslint": "^5.3.0",
+    "eslint-config-scratch": "^5.0.0",
+    "jsdoc": "^3.6.6",
+    "rimraf": "^3.0.2"
+  }
+}
