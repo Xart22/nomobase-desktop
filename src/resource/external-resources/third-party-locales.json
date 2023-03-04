@@ -1,0 +1,10 @@
+{
+    "en": {
+        "deviceDemo.name": "Third Party Device Demo",
+        "deviceDemo.description": "An example showing how to add a third-party board."
+    },
+    "zh-cn": {
+        "deviceDemo.name": "第三方设备演示",
+        "deviceDemo.description": "演示如何添加第三方控制板的示例。"
+    }
+}
