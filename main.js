@@ -7,18 +7,18 @@ const axios = require("axios");
 const fs = require("fs");
 const extract = require("extract-zip");
 const Downloader = require("nodejs-file-downloader");
+const console = require("console");
 const getHwid = require("node-machine-id").machineIdSync;
+const logger = require("electron-log");
+const { io } = require("socket.io-client");
 
-const devToolKey = {
-  // Windows: control+shift+i
-  alt: false,
-  control: true,
-  meta: false, // Windows key
-  shift: true,
-  code: "KeyI",
-};
+const socket = io("http://localhost:3001", {
+  reconnection: true,
+  timeout: 10000,
+});
 
 const syncLibary = async () => {
+  logger.info("Syncing libary");
   try {
     const versionFile = JSON.parse(
       fs.readFileSync(
@@ -101,36 +101,63 @@ const syncLibary = async () => {
 };
 
 app.commandLine.appendSwitch("ignore-certificate-errors");
-app.commandLine.hasSwitch("enable-gpu");
-app.commandLine.hasSwitch("ignore-gpu-blacklist");
 
-app.on("ready", async () => {
-  await syncLibary();
-  const resourceServer = new OpenblockResourceServer();
-  // START: Resource server
-  resourceServer
-    .initializeResources(console.log)
-    .then(() => {
-      resourceServer.listen();
-    })
-    .catch((err) => {
-      console.error(clc.red(`ERR!: Initialize resources error: ${err}`));
-    });
+const template = [
+  {
+    label: "View",
+    submenu: [
+      {
+        role: "reload",
+      },
+      {
+        type: "separator",
+      },
+      {
+        role: "resetzoom",
+      },
+      {
+        role: "zoomin",
+      },
+      {
+        role: "zoomout",
+      },
+      {
+        type: "separator",
+      },
+      {
+        role: "togglefullscreen",
+      },
+    ],
+  },
 
-  resourceServer.on("error", (err) => {
-    console.error(clc.red(`ERR!: Resource server error: ${err}`));
-  });
-  // END: Resource server
-  const link = new OpenBlockLink();
-  // START: Link server
-  link.listen();
-  // END: Link server
+  {
+    role: "help",
+    submenu: [
+      {
+        label: "Learn More",
+        click: async () => {
+          const { shell } = require("electron");
+          await shell.openExternal("https://nomokit.robo-club.com");
+        },
+      },
+      {
+        label: "Check for updates",
+        click: async () => {},
+      },
+      {
+        label: "Exit",
+        click: async () => {
+          app.quit();
+        },
+      },
+    ],
+  },
+];
 
-  //check Token
-  const token = JSON.parse(
-    fs.readFileSync(path.join(__dirname, "data/user.json"), "utf8")
-  );
-  //
+const menu = Menu.buildFromTemplate(template);
+Menu.setApplicationMenu(menu);
+
+const createWindow = () => {
   const win = new BrowserWindow({
     width: 1620,
     height: 900,
@@ -141,28 +168,30 @@ app.on("ready", async () => {
     icon: path.join(__dirname, "/src/assets/img/nomokit.png"),
     title: "Nomobase-Desktop" + " - " + "v" + app.getVersion(),
   });
-  win.webContents.openDevTools();
-  if (token.token !== undefined) {
-    win.loadFile(path.join(__dirname, "/src/gui/index.html"));
+  const token = JSON.parse(
+    fs.readFileSync(path.join(__dirname, "data/user.json"), "utf8")
+  );
+  logger.info(socket.connected);
+  if (socket.connected) {
+    if (token.token !== undefined) {
+      win.loadFile(path.join(__dirname, "/src/auth/index.html"));
+    } else {
+      win.loadFile(path.join(__dirname, "/src/gui/index.html"));
+    }
   } else {
-    win.loadFile(path.join(__dirname, "/src/auth/index.html"));
+    win.loadFile(path.join(__dirname, "/src/connection/index.html"));
   }
-  win.on("closed", async () => {
-    console.log("closed");
-  });
 
-  win.on("minimize", function (event) {
-    event.preventDefault();
-    win.hide();
-  });
+  //win.webContents.openDevTools();
+
   ipcMain.on("login", async (event, arg) => {
     const hwid = getHwid();
     arg.hwid = hwid;
     await axios
-      .post("http://nomokit.test/api/login", arg)
+      .post("https://nomokit.robo-club.com/api/login", arg)
       .then((res) => {
         fs.writeFileSync(
-          path.join(__dirname, "data/user.json"),
+          path.join(__dirname, "/data/user.json"),
           JSON.stringify(res.data)
         );
 
@@ -173,4 +202,56 @@ app.on("ready", async () => {
         event.reply("login-fail", err);
       });
   });
+
+  ipcMain.on("logout", async (event, arg) => {
+    fs.writeFileSync(
+      path.join(__dirname, "data/user.json"),
+      JSON.stringify({})
+    );
+    win.loadFile(path.join(__dirname, "/src/auth/index.html"));
+  });
+  socket.on("disconnect", () => {
+    win.loadFile(path.join(__dirname, "/src/connection/index.html"));
+  });
+
+  socket.on("connect", () => {
+    if (token.token !== undefined) {
+      win.loadFile(path.join(__dirname, "/src/gui/index.html"));
+    } else {
+      win.loadFile(path.join(__dirname, "/src/auth/index.html"));
+    }
+  });
+  win.on("closed", async () => {
+    console.log("closed");
+  });
+};
+
+app.on("ready", () => {
+  createWindow();
+  syncLibary();
+  const resourceServer = new OpenblockResourceServer();
+  resourceServer
+    .initializeResources(console.log)
+    .then(() => {
+      resourceServer.listen();
+      logger.info("Resource server started");
+    })
+    .catch((err) => {
+      console.error(clc.red(`ERR!: Initialize resources error: ${err}`));
+    });
+
+  resourceServer.on("error", (err) => {
+    console.error(clc.red(`ERR!: Resource server error: ${err}`));
+  });
+  //  END: Resource server
+  const link = new OpenBlockLink();
+  //  START: Link server
+  link.listen();
+  logger.info("Link server started");
+  //  END: Link server
+  // check Token
+});
+app.on("window-all-closed", async () => {
+  console.log("window-all-closed");
+  app.quit();
 });

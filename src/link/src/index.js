@@ -11,7 +11,7 @@ const fs = require("fs");
  * Configuration the default user data path. Just for debug.
  * @readonly
  */
-const DEFAULT_USER_DATA_PATH = path.join(__dirname, "../../.openblockData");
+const DEFAULT_USER_DATA_PATH = path.join(__dirname, "../.openblockData");
 console.log(DEFAULT_USER_DATA_PATH);
 
 /**
