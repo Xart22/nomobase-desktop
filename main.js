@@ -12,7 +12,7 @@ const getHwid = require("node-machine-id").machineIdSync;
 const logger = require("electron-log");
 const { io } = require("socket.io-client");
 
-const socket = io("http://localhost:3001", {
+const socket = io("http://15.235.140.95:2023", {
   reconnection: true,
   timeout: 10000,
 });
@@ -221,8 +221,8 @@ const createWindow = () => {
       win.loadFile(path.join(__dirname, "/src/auth/index.html"));
     }
   });
-  win.on("closed", async () => {
-    console.log("closed");
+  win.on("close", async () => {
+    win.destroy();
   });
 };
 

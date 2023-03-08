@@ -3,7 +3,10 @@ const { ipcRenderer } = require("electron");
 window.addEventListener("DOMContentLoaded", async () => {
   const btn = document.getElementById("login");
   const error = document.getElementById("error");
-  error.style.display = "none";
+  if (error !== null) {
+    error.style.display = "none";
+  }
+
   const email = document.getElementById("email");
   const password = document.getElementById("password");
 
@@ -24,17 +27,19 @@ window.addEventListener("DOMContentLoaded", async () => {
     password.classList.add("is-invalid");
     error.innerHTML = "Email atau password salah";
   });
-  btn.addEventListener("click", async () => {
-    login();
-  });
-  email.addEventListener("keyup", (e) => {
-    error.style.display = "none";
-    email.classList.remove("is-invalid");
-    password.classList.remove("is-invalid");
-  });
-  password.addEventListener("keyup", () => {
-    error.style.display = "none";
-    email.classList.remove("is-invalid");
-    password.classList.remove("is-invalid");
-  });
+  if (error !== null) {
+    btn.addEventListener("click", async () => {
+      login();
+    });
+    email.addEventListener("keyup", (e) => {
+      error.style.display = "none";
+      email.classList.remove("is-invalid");
+      password.classList.remove("is-invalid");
+    });
+    password.addEventListener("keyup", () => {
+      error.style.display = "none";
+      email.classList.remove("is-invalid");
+      password.classList.remove("is-invalid");
+    });
+  }
 });
