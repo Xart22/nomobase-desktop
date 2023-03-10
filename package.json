@@ -1,6 +1,6 @@
 {
   "name": "nomobase-desktop",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "",
   "main": "main.js",
   "scripts": {
@@ -9,10 +9,19 @@
     "start": "electron .",
     "build": "electron-builder"
   },
+  "repository": "https://github.com/Xart22/nomobase-desktop",
+  "publish": {
+    "provider": "github",
+    "releaseType": "release"
+  },
   "build": {
-    "appId": "Nomobase-Desktop",
+    "appId": "com.nomobase.desktop",
+    "productName": "Nomobase-Desktop",
     "asar": false,
     "win": {
+      "publish": [
+        "github"
+      ],
       "target": [
         "nsis"
       ],
@@ -20,6 +29,7 @@
       "requestedExecutionLevel": "requireAdministrator"
     },
     "nsis": {
+      "artifactName": "Nomobase-Desktop-${version}.${ext}",
       "oneClick": false,
       "uninstallDisplayName": "Nomobase-Desktop-uninstaller",
       "installerIcon": "src/assets/img/nomokit.ico",
@@ -29,6 +39,7 @@
       "shortcutName": "Nomobase-Desktop",
       "runAfterFinish": true,
       "allowToChangeInstallationDirectory": false,
+      "perMachine": true,
       "include": "build/installer.nsh"
     }
   },
@@ -45,6 +56,7 @@
     "download-github-release": "^0.3.2",
     "electron-log": "^5.0.0-beta.16",
     "electron-store": "^8.1.0",
+    "electron-updater": "^5.3.0",
     "express": "^4.17.1",
     "extract-zip": "^2.0.1",
     "folder-hash": "^4.0.1",

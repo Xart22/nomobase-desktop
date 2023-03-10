@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, Menu } = require("electron");
+const { app, BrowserWindow, ipcMain, dialog, Menu } = require("electron");
 const OpenBlockLink = require("./src/link/src");
 const clc = require("cli-color");
 const OpenblockResourceServer = require("./src/resource/index");
@@ -11,6 +11,12 @@ const console = require("console");
 const getHwid = require("node-machine-id").machineIdSync;
 const logger = require("electron-log");
 const { io } = require("socket.io-client");
+const { autoUpdater, AppUpdater } = require("electron-updater");
+
+autoUpdater.logger = logger;
+autoUpdater.logger.transports.file.level = "info";
+autoUpdater.autoDownload = false;
+autoUpdater.autoInstallOnAppQuit = true;
 
 const socket = io("http://15.235.140.95:2023", {
   reconnection: true,
@@ -141,10 +147,6 @@ const template = [
         },
       },
       {
-        label: "Check for updates",
-        click: async () => {},
-      },
-      {
         label: "Exit",
         click: async () => {
           app.quit();
@@ -156,13 +158,14 @@ const template = [
 
 const menu = Menu.buildFromTemplate(template);
 Menu.setApplicationMenu(menu);
-
+let win;
 const createWindow = () => {
-  const win = new BrowserWindow({
+  win = new BrowserWindow({
     width: 1620,
     height: 900,
     webPreferences: {
       nodeIntegration: true,
+
       preload: path.join(__dirname, "preload.js"),
     },
     icon: path.join(__dirname, "/src/assets/img/nomokit.png"),
@@ -224,6 +227,7 @@ const createWindow = () => {
   win.on("close", async () => {
     win.destroy();
   });
+  return win;
 };
 
 app.on("ready", () => {
@@ -249,8 +253,50 @@ app.on("ready", () => {
   link.listen();
   logger.info("Link server started");
   //  END: Link server
-  // check Token
+  // Check Update
+  autoUpdater.checkForUpdatesAndNotify();
+
+  autoUpdater.on("update-available", () => {
+    dialog
+      .showMessageBox({
+        type: "question",
+        title: "Update available",
+        message:
+          "Update Version " +
+          autoUpdater.getFeedURL().version +
+          " is available",
+        buttons: ["Yes", "No"],
+        yes: 0,
+        no: 1,
+      })
+      .then((result) => {
+        if (result.response === 0) {
+          win.loadFile(path.join(__dirname, "/src/update/index.html"));
+          autoUpdater.downloadUpdate();
+        }
+      });
+  });
+  autoUpdater.on("update-downloaded", () => {
+    dialog
+      .showMessageBox({
+        type: "question",
+        title: "Update available",
+        message: "Update is downloaded, will be installed on restart",
+        buttons: ["Yes", "No"],
+        yes: 0,
+        no: 1,
+      })
+      .then((result) => {
+        if (result.response === 0) {
+          autoUpdater.quitAndInstall();
+        }
+      });
+  });
+  autoUpdater.on("download-progress", (progressObj) => {
+    win.webContents.send("download-progress", progressObj.percent);
+  });
 });
+
 app.on("window-all-closed", async () => {
   console.log("window-all-closed");
   app.quit();

@@ -42,4 +42,9 @@ window.addEventListener("DOMContentLoaded", async () => {
       password.classList.remove("is-invalid");
     });
   }
+  ipcRenderer.on("download-progress", function (event, text) {
+    const progress = document.getElementById("progress-bar");
+    progress.style.width = text + "%";
+    progress.innerHTML = text.toFixed(0) + "%";
+  });
 });
