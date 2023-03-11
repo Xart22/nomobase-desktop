@@ -13,8 +13,8 @@ const logger = require("electron-log");
 const { io } = require("socket.io-client");
 const { autoUpdater, AppUpdater } = require("electron-updater");
 
+logger.transports.file.level = "info";
 autoUpdater.logger = logger;
-autoUpdater.logger.transports.file.level = "info";
 autoUpdater.autoDownload = false;
 
 const socket = io("http://15.235.140.95:2023", {
@@ -146,6 +146,10 @@ const template = [
       {
         label: "Exit",
         click: async () => {
+          fs.rmSync(path.join(__dirname, "/src/resource/.openblockData"), {
+            recursive: true,
+            force: true,
+          });
           app.quit();
         },
       },
@@ -172,15 +176,8 @@ const createWindow = () => {
     fs.readFileSync(path.join(__dirname, "data/user.json"), "utf8")
   );
   logger.info(socket.connected);
-  if (socket.connected) {
-    if (token.token !== undefined) {
-      win.loadFile(path.join(__dirname, "/src/auth/index.html"));
-    } else {
-      win.loadFile(path.join(__dirname, "/src/gui/index.html"));
-    }
-  } else {
-    win.loadFile(path.join(__dirname, "/src/connection/index.html"));
-  }
+
+  win.loadFile(path.join(__dirname, "/src/connection/index.html"));
 
   //win.webContents.openDevTools();
 
@@ -216,7 +213,17 @@ const createWindow = () => {
 
   socket.on("connect", () => {
     if (token.token !== undefined) {
-      win.loadFile(path.join(__dirname, "/src/gui/index.html"));
+      let date = new Date(token.user.subscriptions.end_date);
+      let now = new Date();
+      if (date < now) {
+        fs.writeFileSync(
+          path.join(__dirname, "data/user.json"),
+          JSON.stringify({})
+        );
+        win.loadFile(path.join(__dirname, "/src/auth/index.html"));
+      } else {
+        win.loadFile(path.join(__dirname, "/src/gui/index.html"));
+      }
     } else {
       win.loadFile(path.join(__dirname, "/src/auth/index.html"));
     }
@@ -247,13 +254,14 @@ const createWindow = () => {
   logger.info("Link server started");
   return win;
 };
+app.whenReady().then(() => {
+  if (BrowserWindow.getAllWindows().length === 0) {
+    createWindow();
+  }
+});
+
 app.on("ready", async () => {
-  createWindow();
-
-  //  END: Link server
-  // Check Update
-  autoUpdater.checkForUpdatesAndNotify();
-
+  autoUpdater.checkForUpdates();
   autoUpdater.on("update-available", () => {
     dialog
       .showMessageBox({

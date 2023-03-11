@@ -46,4 +46,10 @@ done:
         SetRegView LastUsed
     ${EndIf}
 
- !macroend
+!macroend
+
+!macro customCheckAppRunning
+
+!macroend
+
+
