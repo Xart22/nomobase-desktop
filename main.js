@@ -16,7 +16,6 @@ const { autoUpdater, AppUpdater } = require("electron-updater");
 autoUpdater.logger = logger;
 autoUpdater.logger.transports.file.level = "info";
 autoUpdater.autoDownload = false;
-autoUpdater.autoInstallOnAppQuit = true;
 
 const socket = io("http://15.235.140.95:2023", {
   reconnection: true,
@@ -32,9 +31,7 @@ const syncLibary = async () => {
         "utf8"
       )
     );
-    const response = await axios.get(
-      "https://nomokit-libary.robo-club.com/api/check-update"
-    );
+    const response = await axios.get("https://nomo-kit.com/api/check-update");
     const data = response.data;
     if (data.version !== versionFile.version) {
       fs.rmSync(path.join(__dirname, "src/link/tools/Arduino/libraries"), {
@@ -143,7 +140,7 @@ const template = [
         label: "Learn More",
         click: async () => {
           const { shell } = require("electron");
-          await shell.openExternal("https://nomokit.robo-club.com");
+          await shell.openExternal("https://nomo-kit.com/");
         },
       },
       {
@@ -188,10 +185,11 @@ const createWindow = () => {
   //win.webContents.openDevTools();
 
   ipcMain.on("login", async (event, arg) => {
+    console.log(arg);
     const hwid = getHwid();
     arg.hwid = hwid;
     await axios
-      .post("https://nomokit.robo-club.com/api/login", arg)
+      .post("https://nomo-kit.com/api/login", arg)
       .then((res) => {
         fs.writeFileSync(
           path.join(__dirname, "/data/user.json"),
@@ -201,8 +199,7 @@ const createWindow = () => {
         win.loadFile(path.join(__dirname, "/src/gui/index.html"));
       })
       .catch((err) => {
-        console.log(err);
-        event.reply("login-fail", err);
+        event.reply("login-fail", err.response.data);
       });
   });
 
@@ -227,13 +224,9 @@ const createWindow = () => {
   win.on("close", async () => {
     win.destroy();
   });
-  return win;
-};
-
-app.on("ready", () => {
-  createWindow();
   syncLibary();
   const resourceServer = new OpenblockResourceServer();
+
   resourceServer
     .initializeResources(console.log)
     .then(() => {
@@ -252,6 +245,11 @@ app.on("ready", () => {
   //  START: Link server
   link.listen();
   logger.info("Link server started");
+  return win;
+};
+app.on("ready", async () => {
+  createWindow();
+
   //  END: Link server
   // Check Update
   autoUpdater.checkForUpdatesAndNotify();
@@ -261,10 +259,7 @@ app.on("ready", () => {
       .showMessageBox({
         type: "question",
         title: "Update available",
-        message:
-          "Update Version " +
-          autoUpdater.getFeedURL().version +
-          " is available",
+        message: "Update Version is available",
         buttons: ["Yes", "No"],
         yes: 0,
         no: 1,
@@ -288,9 +283,13 @@ app.on("ready", () => {
       })
       .then((result) => {
         if (result.response === 0) {
-          autoUpdater.quitAndInstall();
+          app.exit();
+          autoUpdater.quitAndInstall(false, false);
         }
       });
+  });
+  autoUpdater.on("error", (err) => {
+    dialog.showErrorBox("Error: ", err == null ? "unknown" : err);
   });
   autoUpdater.on("download-progress", (progressObj) => {
     win.webContents.send("download-progress", progressObj.percent);
@@ -298,6 +297,20 @@ app.on("ready", () => {
 });
 
 app.on("window-all-closed", async () => {
-  console.log("window-all-closed");
-  app.quit();
+  if (process.platform !== "darwin") {
+    fs.rmSync(path.join(__dirname, "/src/resource/.openblockData"), {
+      recursive: true,
+      force: true,
+    });
+    win.destroy();
+    app.exit();
+  }
+});
+app.on("before-quit", async () => {
+  fs.rmSync(path.join(__dirname, "/src/resource/.openblockData"), {
+    recursive: true,
+    force: true,
+  });
+  win.destroy();
+  app.exit();
 });

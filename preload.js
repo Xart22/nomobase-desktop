@@ -21,12 +21,7 @@ window.addEventListener("DOMContentLoaded", async () => {
       password.classList.add("is-invalid");
     }
   }
-  ipcRenderer.on("login-fail", (event, arg) => {
-    error.style.display = "block";
-    email.classList.add("is-invalid");
-    password.classList.add("is-invalid");
-    error.innerHTML = "Email atau password salah";
-  });
+
   if (error !== null) {
     btn.addEventListener("click", async () => {
       login();
@@ -40,6 +35,12 @@ window.addEventListener("DOMContentLoaded", async () => {
       error.style.display = "none";
       email.classList.remove("is-invalid");
       password.classList.remove("is-invalid");
+    });
+    ipcRenderer.on("login-fail", (event, arg) => {
+      error.style.display = "block";
+      email.classList.add("is-invalid");
+      password.classList.add("is-invalid");
+      error.innerHTML = "Email atau password salah";
     });
   }
   ipcRenderer.on("download-progress", function (event, text) {
