@@ -16,6 +16,7 @@ const { autoUpdater, AppUpdater } = require("electron-updater");
 logger.transports.file.level = "info";
 autoUpdater.logger = logger;
 autoUpdater.autoDownload = false;
+autoUpdater.autoInstallOnAppQuit = false;
 
 const socket = io("http://15.235.140.95:2023", {
   reconnection: true,
@@ -261,7 +262,7 @@ app.whenReady().then(() => {
 });
 
 app.on("ready", async () => {
-  autoUpdater.checkForUpdates();
+  autoUpdater.checkForUpdatesAndNotify();
   autoUpdater.on("update-available", () => {
     dialog
       .showMessageBox({
