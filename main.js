@@ -1,7 +1,7 @@
 const { app, BrowserWindow, ipcMain, dialog, Menu } = require("electron");
 const OpenBlockLink = require("./src/link/src");
 const clc = require("cli-color");
-const OpenblockResourceServer = require("./src/resource/index");
+
 const path = require("path");
 const axios = require("axios");
 const fs = require("fs");
@@ -233,22 +233,6 @@ const createWindow = () => {
     win.destroy();
   });
   syncLibary();
-  const resourceServer = new OpenblockResourceServer();
-
-  resourceServer
-    .initializeResources(console.log)
-    .then(() => {
-      resourceServer.listen();
-      logger.info("Resource server started");
-    })
-    .catch((err) => {
-      console.error(clc.red(`ERR!: Initialize resources error: ${err}`));
-    });
-
-  resourceServer.on("error", (err) => {
-    console.error(clc.red(`ERR!: Resource server error: ${err}`));
-  });
-  //  END: Resource server
   const link = new OpenBlockLink();
   //  START: Link server
   link.listen();
@@ -307,19 +291,11 @@ app.on("ready", async () => {
 
 app.on("window-all-closed", async () => {
   if (process.platform !== "darwin") {
-    fs.rmSync(path.join(__dirname, "/src/resource/.openblockData"), {
-      recursive: true,
-      force: true,
-    });
     win.destroy();
     app.exit();
   }
 });
 app.on("before-quit", async () => {
-  fs.rmSync(path.join(__dirname, "/src/resource/.openblockData"), {
-    recursive: true,
-    force: true,
-  });
   win.destroy();
   app.exit();
 });
