@@ -214,14 +214,16 @@ const createWindow = () => {
 
   socket.on("connect", () => {
     if (token.token !== undefined) {
-      let date = new Date(token.user.subscriptions.end_date);
-      let now = new Date();
-      if (date < now) {
-        fs.writeFileSync(
-          path.join(__dirname, "data/user.json"),
-          JSON.stringify({})
-        );
-        win.loadFile(path.join(__dirname, "/src/auth/index.html"));
+      if (token.user.subscriptions !== null) {
+        let date = new Date(token.user.subscriptions.end_date);
+        let now = new Date();
+        if (date < now) {
+          fs.writeFileSync(
+            path.join(__dirname, "data/user.json"),
+            JSON.stringify({})
+          );
+          win.loadFile(path.join(__dirname, "/src/auth/index.html"));
+        }
       } else {
         win.loadFile(path.join(__dirname, "/src/gui/index.html"));
       }
