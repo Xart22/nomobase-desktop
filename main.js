@@ -147,10 +147,6 @@ const template = [
       {
         label: "Exit",
         click: async () => {
-          fs.rmSync(path.join(__dirname, "/src/resource/.openblockData"), {
-            recursive: true,
-            force: true,
-          });
           app.quit();
         },
       },
@@ -176,7 +172,6 @@ const createWindow = () => {
   const token = JSON.parse(
     fs.readFileSync(path.join(__dirname, "data/user.json"), "utf8")
   );
-  logger.info(socket.connected);
 
   win.loadFile(path.join(__dirname, "/src/connection/index.html"));
 
@@ -213,20 +208,9 @@ const createWindow = () => {
   });
 
   socket.on("connect", () => {
+    console.log(token.token);
     if (token.token !== undefined) {
-      if (token.user.subscriptions !== null) {
-        let date = new Date(token.user.subscriptions.end_date);
-        let now = new Date();
-        if (date < now) {
-          fs.writeFileSync(
-            path.join(__dirname, "data/user.json"),
-            JSON.stringify({})
-          );
-          win.loadFile(path.join(__dirname, "/src/auth/index.html"));
-        }
-      } else {
-        win.loadFile(path.join(__dirname, "/src/gui/index.html"));
-      }
+      win.loadFile(path.join(__dirname, "/src/gui/index.html"));
     } else {
       win.loadFile(path.join(__dirname, "/src/auth/index.html"));
     }

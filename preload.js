@@ -1,10 +1,16 @@
 const { ipcRenderer } = require("electron");
-
+const shell = require("electron").shell;
 window.addEventListener("DOMContentLoaded", async () => {
   const btn = document.getElementById("login");
   const error = document.getElementById("error");
+  const openComunity = document.querySelector('[aria-label="Open Community"]');
   if (error !== null) {
     error.style.display = "none";
+  }
+  if (openComunity !== null) {
+    openComunity.addEventListener("click", () => {
+      shell.openExternal("https://nomo-kit.com/community");
+    });
   }
 
   const email = document.getElementById("email");
