@@ -1,7 +1,6 @@
 const { app, BrowserWindow, ipcMain, dialog, Menu } = require("electron");
 const OpenBlockLink = require("./src/link/src");
 const clc = require("cli-color");
-
 const path = require("path");
 const axios = require("axios");
 const fs = require("fs");
@@ -17,11 +16,14 @@ logger.transports.file.level = "info";
 autoUpdater.logger = logger;
 autoUpdater.autoDownload = false;
 autoUpdater.autoInstallOnAppQuit = false;
-
+//http://15.235.140.95:2023
 const socket = io("http://15.235.140.95:2023", {
   reconnection: true,
   timeout: 10000,
 });
+let token = JSON.parse(
+  fs.readFileSync(path.join(__dirname, "data/user.json"), "utf8")
+);
 
 const syncLibary = async () => {
   logger.info("Syncing libary");
@@ -89,6 +91,22 @@ const syncLibary = async () => {
                   path.join(__dirname, "src/link/tools/Arduino/libraries", file)
                 );
               }
+            });
+          }
+        );
+        fs.readdir(
+          path.join(__dirname, "src/link/tools/Arduino/local"),
+          (err, files) => {
+            files.forEach(async (file) => {
+              fs.cpSync(
+                path.join(__dirname, "src/link/tools/Arduino/local/" + file),
+                path.join(
+                  __dirname,
+                  "src/link/tools/Arduino/libraries/" + file
+                ),
+
+                { recursive: true }
+              );
             });
           }
         );
@@ -163,33 +181,38 @@ const createWindow = () => {
     height: 900,
     webPreferences: {
       nodeIntegration: true,
-
+      contextIsolation: true,
       preload: path.join(__dirname, "preload.js"),
     },
     icon: path.join(__dirname, "/src/assets/img/nomokit.png"),
     title: "Nomobase-Desktop" + " - " + "v" + app.getVersion(),
   });
-  const token = JSON.parse(
-    fs.readFileSync(path.join(__dirname, "data/user.json"), "utf8")
-  );
 
-  win.loadFile(path.join(__dirname, "/src/connection/index.html"));
+  logger.info(socket.connected);
+  // win.loadFile(path.join(__dirname, "/src/connection/index.html"));
 
-  //win.webContents.openDevTools();
+  win.webContents.openDevTools();
 
   ipcMain.on("login", async (event, arg) => {
-    console.log(arg);
     const hwid = getHwid();
     arg.hwid = hwid;
+    arg.app = "nomopro";
     await axios
       .post("https://nomo-kit.com/api/login", arg)
-      .then((res) => {
+      .then(async (res) => {
         fs.writeFileSync(
           path.join(__dirname, "/data/user.json"),
           JSON.stringify(res.data)
         );
+        token = await JSON.parse(
+          fs.readFileSync(path.join(__dirname, "data/user.json"), "utf8")
+        );
 
+        socket.emit("login", res.data);
+        setMenu();
         win.loadFile(path.join(__dirname, "/src/gui/index.html"));
+
+        //win.loadFile(path.join(__dirname, "/src/gui/index.html"));
       })
       .catch((err) => {
         event.reply("login-fail", err.response.data);
@@ -208,8 +231,8 @@ const createWindow = () => {
   });
 
   socket.on("connect", () => {
-    console.log(token.token);
     if (token.token !== undefined) {
+      setMenu();
       win.loadFile(path.join(__dirname, "/src/gui/index.html"));
     } else {
       win.loadFile(path.join(__dirname, "/src/auth/index.html"));
@@ -219,6 +242,7 @@ const createWindow = () => {
     win.destroy();
   });
   syncLibary();
+
   const link = new OpenBlockLink();
   //  START: Link server
   link.listen();
@@ -228,6 +252,30 @@ const createWindow = () => {
 app.whenReady().then(() => {
   if (BrowserWindow.getAllWindows().length === 0) {
     createWindow();
+  }
+});
+socket.on("login-fail", async (data) => {
+  if (data == token.token) {
+    await axios
+      .get("https://nomo-kit.com/api/logout", {
+        headers: { Authorization: "Bearer " + token.token },
+      })
+      .then((res) => {
+        fs.writeFileSync(
+          path.join(__dirname, "data/user.json"),
+          JSON.stringify({})
+        );
+        // win.loadFile(path.join(__dirname, "/src/auth/index.html"));
+        dialog.showErrorBox(
+          "Error: ",
+          "Seseorang telah login dengan akun anda, silahkan login kembali"
+        );
+        app.exit();
+        app.relaunch();
+      })
+      .catch((err) => {
+        console.log(err);
+      });
   }
 });
 
@@ -275,13 +323,148 @@ app.on("ready", async () => {
   });
 });
 
-app.on("window-all-closed", async () => {
+app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
+    socket.emit("logout", token);
     win.destroy();
     app.exit();
   }
 });
-app.on("before-quit", async () => {
-  win.destroy();
-  app.exit();
-});
+
+const setMenu = () => {
+  const localLib = JSON.parse(
+    fs.readFileSync(
+      path.join(__dirname, "src/link/tools/localLib.json"),
+      "utf8"
+    )
+  );
+  const libary = localLib.map((item, index) => {
+    return {
+      label: `${index + 1}. ${item}`,
+    };
+  });
+  const template = [
+    {
+      label: "View",
+      submenu: [
+        {
+          role: "reload",
+        },
+        {
+          type: "separator",
+        },
+        {
+          role: "resetzoom",
+        },
+        {
+          role: "zoomin",
+        },
+        {
+          role: "zoomout",
+        },
+        {
+          type: "separator",
+        },
+        {
+          role: "togglefullscreen",
+        },
+      ],
+    },
+
+    {
+      label: "Local Library",
+      submenu: [
+        {
+          label: "Add .ZIP Library",
+          click: async () => {
+            dialog
+              .showOpenDialog({
+                properties: ["openFile"],
+                filters: [{ name: "Zip", extensions: ["zip"] }],
+              })
+              .then(async (res) => {
+                if (!res.canceled) {
+                  try {
+                    await extract(
+                      res.filePaths[0],
+                      {
+                        dir: path.join(
+                          __dirname,
+                          "src/link/tools/Arduino/local"
+                        ),
+                      },
+                      function (err) {
+                        if (err) {
+                          console.log(err);
+                        }
+                      }
+                    );
+                    await extract(
+                      res.filePaths[0],
+                      {
+                        dir: path.join(
+                          __dirname,
+                          "src/link/tools/Arduino/libraries"
+                        ),
+                      },
+                      function (err) {
+                        if (err) {
+                          console.log(err);
+                        }
+                      }
+                    );
+
+                    const filesName = [];
+                    fs.readdir(
+                      path.join(__dirname, "src/link/tools/Arduino/local"),
+                      (err, files) => {
+                        files.forEach(async (file) => {
+                          if (!file.includes(".txt")) {
+                            filesName.push(file + ".h");
+                          }
+                        });
+                        fs.writeFileSync(
+                          path.join(__dirname, "src/link/tools/localLib.json"),
+                          JSON.stringify(filesName)
+                        );
+                      }
+                    );
+                    dialog.showMessageBox({
+                      type: "info",
+                      title: "Success",
+                      message: "Add libary success",
+                    });
+                    setMenu();
+                  } catch (error) {
+                    console.log(error);
+                  }
+                }
+              });
+          },
+        },
+        ...libary,
+      ],
+    },
+
+    {
+      role: "help",
+      submenu: [
+        {
+          label: "Learn More",
+          click: async () => {
+            const { shell } = require("electron");
+            await shell.openExternal("https://nomo-kit.com/");
+          },
+        },
+        {
+          label: "Exit",
+          click: async () => {
+            app.quit();
+          },
+        },
+      ],
+    },
+  ];
+  const menu = Menu.buildFromTemplate(template);
+  Menu.setApplicationMenu(menu);
+};
