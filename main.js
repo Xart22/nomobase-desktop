@@ -191,7 +191,7 @@ const createWindow = () => {
   logger.info(socket.connected);
   // win.loadFile(path.join(__dirname, "/src/connection/index.html"));
 
-  win.webContents.openDevTools();
+  //win.webContents.openDevTools();
 
   ipcMain.on("login", async (event, arg) => {
     const hwid = getHwid();
