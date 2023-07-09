@@ -58,21 +58,22 @@ window.addEventListener("DOMContentLoaded", async () => {
       email.classList.remove("is-invalid");
       password.classList.remove("is-invalid");
     });
-    ipcRenderer.on("login-fail", (event, arg) => {
-      error.style.display = "block";
-      email.classList.add("is-invalid");
-      password.classList.add("is-invalid");
-      error.innerHTML = "Email atau password salah";
-    });
-    ipcRenderer.on("no-subscription", (event, arg) => {
-      error.style.display = "block";
-      error.innerHTML = "Anda belum memiliki paket langganan";
-    });
   }
+});
 
-  ipcRenderer.on("download-progress", function (event, text) {
-    const progress = document.getElementById("progress-bar");
-    progress.style.width = text + "%";
-    progress.innerHTML = text.toFixed(0) + "%";
-  });
+ipcRenderer.on("login-fail", (event, arg) => {
+  error.style.display = "block";
+  email.classList.add("is-invalid");
+  password.classList.add("is-invalid");
+  error.innerHTML = "Email atau password salah";
+});
+ipcRenderer.on("no-subscription", (event, arg) => {
+  error.style.display = "block";
+  error.innerHTML = "Anda belum memiliki paket langganan";
+});
+ipcRenderer.on("download-progress", function (event, text) {
+  console.log(text);
+  const progress = document.getElementById("progress-bar");
+  progress.style.width = text + "%";
+  progress.innerHTML = text.toFixed(0) + "%";
 });

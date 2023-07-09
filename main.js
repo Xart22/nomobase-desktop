@@ -10,7 +10,7 @@ const console = require("console");
 const getHwid = require("node-machine-id").machineIdSync;
 const logger = require("electron-log");
 const { io } = require("socket.io-client");
-const { autoUpdater, AppUpdater } = require("electron-updater");
+const { autoUpdater } = require("electron-updater");
 
 logger.transports.file.level = "info";
 autoUpdater.logger = logger;
@@ -94,23 +94,6 @@ const syncLibary = async () => {
             });
           }
         );
-        fs.readdir(
-          path.join(__dirname, "src/link/tools/Arduino/local"),
-          (err, files) => {
-            files.forEach(async (file) => {
-              fs.cpSync(
-                path.join(__dirname, "src/link/tools/Arduino/local/" + file),
-                path.join(
-                  __dirname,
-                  "src/link/tools/Arduino/libraries/" + file
-                ),
-
-                { recursive: true }
-              );
-            });
-          }
-        );
-
         fs.writeFileSync(
           path.join(__dirname, "src/link/tools/version.json"),
           JSON.stringify(data)
@@ -326,7 +309,6 @@ app.on("ready", async () => {
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
     socket.emit("logout", token);
-    win.destroy();
     app.exit();
   }
 });
@@ -368,81 +350,6 @@ const setMenu = () => {
         {
           role: "togglefullscreen",
         },
-      ],
-    },
-
-    {
-      label: "Local Library",
-      submenu: [
-        {
-          label: "Add .ZIP Library",
-          click: async () => {
-            dialog
-              .showOpenDialog({
-                properties: ["openFile"],
-                filters: [{ name: "Zip", extensions: ["zip"] }],
-              })
-              .then(async (res) => {
-                if (!res.canceled) {
-                  try {
-                    await extract(
-                      res.filePaths[0],
-                      {
-                        dir: path.join(
-                          __dirname,
-                          "src/link/tools/Arduino/local"
-                        ),
-                      },
-                      function (err) {
-                        if (err) {
-                          console.log(err);
-                        }
-                      }
-                    );
-                    await extract(
-                      res.filePaths[0],
-                      {
-                        dir: path.join(
-                          __dirname,
-                          "src/link/tools/Arduino/libraries"
-                        ),
-                      },
-                      function (err) {
-                        if (err) {
-                          console.log(err);
-                        }
-                      }
-                    );
-
-                    const filesName = [];
-                    fs.readdir(
-                      path.join(__dirname, "src/link/tools/Arduino/local"),
-                      (err, files) => {
-                        files.forEach(async (file) => {
-                          if (!file.includes(".txt")) {
-                            filesName.push(file + ".h");
-                          }
-                        });
-                        fs.writeFileSync(
-                          path.join(__dirname, "src/link/tools/localLib.json"),
-                          JSON.stringify(filesName)
-                        );
-                      }
-                    );
-                    dialog.showMessageBox({
-                      type: "info",
-                      title: "Success",
-                      message: "Add libary success",
-                    });
-                    setMenu();
-                  } catch (error) {
-                    console.log(error);
-                  }
-                }
-              });
-          },
-        },
-        ...libary,
       ],
     },
 
